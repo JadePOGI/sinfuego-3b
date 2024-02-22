@@ -1,5 +1,5 @@
 # Welcome to streamlit
-Hello Laurence:
+Hello Laurence
 
 by: Jade
 
