@@ -1,7 +1,4 @@
 # Welcome to streamlit
-Hello Laurence
-
-by: Jade
 
 This is the app you get when you run `streamlit hello`, extracted as its own app.
 
