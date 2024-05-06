@@ -94,4 +94,3 @@ elif genre == 'File':
             # Decrypt the file contents using the provided 'a' and 'b' values
             decrypted_text = affine_decrypt(encrypted_text, a, b)
             st.write("Decrypted of file contents:", decrypted_text)
-
