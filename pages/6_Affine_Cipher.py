@@ -50,7 +50,7 @@ genre = st.radio(
 
 if genre == 'Text':
     # Example usage:
-    plaintext = st.text_area('Enter a plaintext')
+    plaintext = st.text_area('Enter your text to Encrypt')
     a = 5
     b = 8
 
