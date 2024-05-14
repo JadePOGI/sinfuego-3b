@@ -23,7 +23,7 @@ def sha512_hash(input_string):
 # Example usage
 input_string = "Hello, World!"
 sha512_hash_value = sha512_hash(input_string)
-print("SHA-512 Hash:", sha512_hash_value)
+st.write("SHA-512 Hash:", sha512_hash_value)
 
 genre = st.radio(
     "Choose Input:",
