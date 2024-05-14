@@ -92,5 +92,3 @@ elif option == 'File':
         # Decrypt the file contents
         decrypted_data = decrypt_AES(iv, cipher_text, key)
         st.write("Decryption of file contents:", decrypted_data)
-
-   

@@ -21,7 +21,7 @@ def sha384_hash(input_string):
 # Example usage
 input_string = "Hello, World!"
 sha384_hash_value = sha384_hash(input_string)
-st.write("SHA-384 Hash:", sha384_hash_value)
+print("SHA-384 Hash:", sha384_hash_value)
 
 genre = st.radio(
     "Choose Input:",

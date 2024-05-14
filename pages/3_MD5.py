@@ -23,7 +23,7 @@ def md5_hash(input_string):
 # Example usage
 input_string = "Hello, World!"
 md5_hash_value = md5_hash(input_string)
-st.write("MD5 Hash:", md5_hash_value)
+print("MD5 Hash:", md5_hash_value)
 
 genre = st.radio(
     "Choose Input:",

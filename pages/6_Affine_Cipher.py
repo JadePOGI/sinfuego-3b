@@ -50,7 +50,7 @@ genre = st.radio(
 
 if genre == 'Text':
     # Example usage:
-    plaintext = st.text_area('Enter your text to Encrypt')
+    plaintext = st.text_area('Enter a plaintext')
     a = 5
     b = 8
 
@@ -94,3 +94,4 @@ elif genre == 'File':
             # Decrypt the file contents using the provided 'a' and 'b' values
             decrypted_text = affine_decrypt(encrypted_text, a, b)
             st.write("Decrypted of file contents:", decrypted_text)
+
