@@ -1,8 +1,7 @@
 import streamlit as st
 from PyPDF2 import PdfReader, PdfWriter
+from docx import Document
 import io
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
 
 st.header("Welcome to Caesar Cipher!🔐")
 st.write("Caesar Cipher Technique is the simple and easy method of encryption technique.")
@@ -30,60 +29,66 @@ def caesar_cipher(text, shift):
 def caesar_decipher(text, shift):
     return caesar_cipher(text, -shift)
 
+def read_text(file):
+    return file.getvalue().decode("utf-8")
+
 def read_pdf(file):
-    pdf_reader = PdfReader(file)
+    try:
+        pdf_reader = PdfReader(file)
+        text = ""
+        for page_num in range(len(pdf_reader.pages)):
+            page = pdf_reader.pages[page_num]
+            text += page.extract_text()
+        return text
+    except Exception as e:
+        st.error("Error reading PDF file: " + str(e))
+        return None
+
+def read_docx(file):
+    doc = Document(file)
     text = ""
-    for page_num in range(len(pdf_reader.pages)):
-        page = pdf_reader.pages[page_num]
-        text += page.extract_text()
+    for para in doc.paragraphs:
+        text += para.text + "\n"
     return text
 
-def create_pdf_from_text(text):
+def write_pdf(text, original_pdf_buffer):
     pdf_buffer = io.BytesIO()
-    c = canvas.Canvas(pdf_buffer, pagesize=letter)
-    text_object = c.beginText(40, 750)
-    text_object.setFont("Helvetica", 12)
+    pdf_writer = PdfWriter()
 
-    lines = text.split('\n')
-    for line in lines:
-        text_object.textLine(line)
-    
-    c.drawText(text_object)
-    c.showPage()
-    c.save()
+    # Get the number of pages in the original PDF
+    original_pdf = PdfReader(original_pdf_buffer)
+    num_pages = len(original_pdf.pages)
+
+    # Iterate through each page and add it to the new PDF
+    for page_num in range(num_pages):
+        # Create a new page in the output PDF
+        pdf_writer.add_blank_page(width=original_pdf.pages[page_num].mediaBox.getWidth(), height=original_pdf.pages[page_num].mediaBox.getHeight())
+
+        # Decrypt the text for this page
+        page_text = text[page_num] if page_num < len(text) else ""
+
+        # Write the decrypted text to the current page
+        pdf_writer.add_page(PdfReader(io.BytesIO(page_text.encode())).pages[0])
+
+    pdf_writer.write(pdf_buffer)
     pdf_buffer.seek(0)
     return pdf_buffer
 
-def write_pdf_from_text(text, original_pdf):
-    pdf_reader = PdfReader(original_pdf)
-    pdf_writer = PdfWriter()
-    
-    # Add the original pages
-    for page in pdf_reader.pages:
-        pdf_writer.add_page(page)
 
-    # Create a new page with the decrypted text
-    pdf_buffer = io.BytesIO()
-    c = canvas.Canvas(pdf_buffer, pagesize=letter)
-    text_object = c.beginText(40, 750)
-    text_object.setFont("Helvetica", 12)
-
-    lines = text.split('\n')
-    for line in lines:
-        text_object.textLine(line)
-    
-    c.drawText(text_object)
-    c.showPage()
-    c.save()
-    pdf_buffer.seek(0)
-
-    new_pdf_reader = PdfReader(pdf_buffer)
-    pdf_writer.add_page(new_pdf_reader.pages[0])
-
-    pdf_output = io.BytesIO()
-    pdf_writer.write(pdf_output)
-    pdf_output.seek(0)
-    return pdf_output
+def file_uploader(label, type):
+    uploaded_file = st.file_uploader(label, type=type)
+    if uploaded_file is not None:
+        if uploaded_file.type == "application/pdf":
+            file_contents = read_pdf(uploaded_file)
+            file_extension = ".pdf"
+        elif uploaded_file.type == "text/plain":
+            file_contents = read_text(uploaded_file)
+            file_extension = ".txt"
+        elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+            file_contents = read_docx(uploaded_file)
+            file_extension = ".txt"  # Use .txt extension for docx files
+        return file_contents, uploaded_file.name, file_extension
+    return None, None, None
 
 genre = st.radio(
     "Choose Input:",
@@ -104,34 +109,49 @@ if genre == 'Text':
 
 elif genre == 'File':
     st.write('Enter Your Selected File.')
-    uploaded_file = st.file_uploader("Choose a file", type=["pdf"])
+    uploaded_file, file_name, file_extension = file_uploader("Choose a file", type=["pdf", "txt", "docx"])
     if uploaded_file is not None:
-        file_contents = read_pdf(uploaded_file)
-        st.write("File contents extracted successfully.")
 
         encrypt_decrypt_choice = st.radio('Choose one', options=('Encrypt', 'Decrypt'))
 
         if encrypt_decrypt_choice == 'Encrypt':
             shift = 5
-            encrypted_text = caesar_cipher(file_contents, shift)
-            encrypted_pdf = create_pdf_from_text(encrypted_text)
-            st.download_button(
-                label="Download Encrypted File",
-                data=encrypted_pdf.getvalue(),
-                file_name="encrypted_file.pdf",
-                mime="application/pdf"
-            )
-
-        elif encrypt_decrypt_choice == 'Decrypt':
-            encrypted_file = st.file_uploader("Upload the encrypted file", type=["pdf"])
-            if encrypted_file is not None:
-                encrypted_contents = read_pdf(encrypted_file)
-                shift = 5
-                decrypted_text = caesar_decipher(encrypted_contents, shift)
-                decrypted_pdf = write_pdf_from_text(decrypted_text, uploaded_file)
+            encrypted_text = caesar_cipher(uploaded_file, shift)
+            st.write("Encrypted file contents:")
+            if file_extension == ".pdf":
+                encrypted_pdf = write_pdf(encrypted_text, uploaded_file)
                 st.download_button(
-                    label="Download Decrypted File",
-                    data=decrypted_pdf.getvalue(),
-                    file_name="decrypted_file.pdf",
+                    label="Download Encrypted File",
+                    data=encrypted_pdf.getvalue(),
+                    file_name=f"encrypted_{file_name}",
                     mime="application/pdf"
                 )
+            else:
+                st.download_button(
+                    label="Download Encrypted File",
+                    data=encrypted_text.encode(),
+                    file_name=f"encrypted_{file_name}{file_extension}",
+                    mime="text/plain"
+                )
+
+        elif encrypt_decrypt_choice == 'Decrypt':
+            encrypted_file, _, _ = file_uploader("Upload the encrypted file", type=["txt", "pdf"])
+            if encrypted_file is not None:
+                shift = 5
+                decrypted_text = caesar_decipher(encrypted_file, shift)
+                st.write("Decryption completed successfully.")
+                if file_extension == ".pdf":
+                    decrypted_pdf = write_pdf(decrypted_text, encrypted_file)
+                    st.download_button(
+                        label="Download Decrypted File",
+                        data=decrypted_pdf.getvalue(),
+                        file_name=f"decrypted_{file_name}",
+                        mime="application/pdf"
+                    )
+                else:
+                    st.download_button(
+                        label="Download Decrypted File",
+                        data=decrypted_text.encode(),
+                        file_name=f"decrypted_{file_name}{file_extension}",
+                        mime="text/plain"
+                    )
