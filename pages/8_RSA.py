@@ -26,15 +26,17 @@ def encrypt_message(public_key, message):
     aes_cipher = AES.new(session_key, AES.MODE_EAX)
     ciphertext, tag = aes_cipher.encrypt_and_digest(message)
     
-    return encrypted_session_key + aes_cipher.nonce + tag + ciphertext
+    return base64.b64encode(encrypted_session_key + aes_cipher.nonce + tag + ciphertext).decode('utf-8')
 
 # Function to decrypt a message using hybrid RSA and AES
 def decrypt_message(private_key, encrypted_message):
+    encrypted_data = base64.b64decode(encrypted_message)
+    
     # Extract the components
-    rsa_encrypted_session_key = encrypted_message[:256]
-    nonce = encrypted_message[256:272]
-    tag = encrypted_message[272:288]
-    ciphertext = encrypted_message[288:]
+    rsa_encrypted_session_key = encrypted_data[:256]
+    nonce = encrypted_data[256:272]
+    tag = encrypted_data[272:288]
+    ciphertext = encrypted_data[288:]
     
     # Decrypt the session key with RSA private key
     rsa_key = RSA.import_key(private_key)
@@ -61,24 +63,21 @@ if 'private_key' not in st.session_state:
     st.session_state['public_key'] = public_key
 
 if option == "Text Input":
-    message = st.text_area("Enter the message you want to encrypt or decrypt:")
-    
-    if st.button("Encrypt"):
-        encrypted_message = encrypt_message(st.session_state['public_key'], message.encode())
-        st.session_state['encrypted_message'] = base64.b64encode(encrypted_message).decode('utf-8')
-        st.session_state['last_action'] = 'encrypt'
-        
-    if st.button("Decrypt"):
-        if 'encrypted_message' in st.session_state:
-            decrypted_message = decrypt_message(st.session_state['private_key'], base64.b64decode(st.session_state['encrypted_message']))
+    action = st.radio("Choose action:", ("Encrypt", "Decrypt"))
+    if action == "Encrypt":
+        message = st.text_area("Enter the message you want to encrypt:")
+        if st.button("Encrypt"):
+            encrypted_message = encrypt_message(st.session_state['public_key'], message.encode())
+            st.session_state['encrypted_message'] = encrypted_message
+            st.session_state['last_action'] = 'encrypt'
+            st.text_area("Encrypted Message", value=encrypted_message, height=200)
+    elif action == "Decrypt":
+        encrypted_message = st.text_area("Enter the message you want to decrypt:")
+        if st.button("Decrypt"):
+            decrypted_message = decrypt_message(st.session_state['private_key'], encrypted_message)
             st.text_area("Decrypted Message", value=decrypted_message.decode('utf-8'), height=200)
             st.session_state['last_action'] = 'decrypt'
-        else:
-            st.error("No encrypted message found. Please encrypt a message first.")
 
-    if 'encrypted_message' in st.session_state and st.session_state.get('last_action') == 'encrypt':
-        st.text_area("Encrypted Message", value=st.session_state['encrypted_message'], height=200)
-    
 elif option == "File Upload":
     file_operation = st.selectbox("Choose operation:", ["Encrypt a file", "Decrypt a file"])
 
@@ -93,7 +92,8 @@ elif option == "File Upload":
                 
                 # Save encrypted file
                 encrypted_file_name = uploaded_file.name + ".enc"
-                st.session_state['encrypted_file_data'] = encrypted_file_data
+                with open(encrypted_file_name, "wb") as f:
+                    f.write(encrypted_file_data)
                 
                 st.download_button(
                     label="Download Encrypted File",
@@ -113,7 +113,8 @@ elif option == "File Upload":
                 
                 # Save decrypted file
                 decrypted_file_name = "decrypted_" + os.path.splitext(encrypted_file.name)[0]
-                st.session_state['decrypted_file_data'] = decrypted_file_data
+                with open(decrypted_file_name, "wb") as f:
+                    f.write(decrypted_file_data)
                 
                 st.download_button(
                     label="Download Decrypted File",
